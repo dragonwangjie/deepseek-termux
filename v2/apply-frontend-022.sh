@@ -5,7 +5,9 @@ set -euo pipefail
 export PREFIX=${PREFIX:-/data/data/com.termux/files/usr}
 export PATH=$PREFIX/bin:$PREFIX/bin/applets:/system/bin:/system/xbin
 export LD_LIBRARY_PATH=$PREFIX/lib
-export HOME=${TERMUX_HOME:-${HOME:-/data/data/com.termux/files/home}}
+export TMPDIR=${PREFIX:-/data/data/com.termux/files/usr}/tmp
+mkdir -p "$TMPDIR"
+export HOME=${TERMUX_HOME:-$(cd "${PREFIX:-/data/data/com.termux/files/usr}/.." && pwd)/home}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 HTML=${1:-$HOME/dsh022/node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html}
 [ -f "$HTML" ] || { echo "[fe] 未找到 $HTML"; exit 1; }
