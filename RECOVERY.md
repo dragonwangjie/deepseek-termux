@@ -57,3 +57,26 @@ Termux 是 debug 签名构建（0.119.0-beta.3, flags 含 DEBUGGABLE），所以
 **宿主机 Ubuntu /root 每次重启清空**（proot 非持久层）：`/root/dsh` 客户端、`/root/.ssh`、`/tmp/*` 全丢。dsh 服务端在 Termux home 的 `dsh022/`（不是 `dsh/`），重启不丢；宿主机侧工具每次重启后需重建。
 
 **验证手段修正**：设备 shell 无 curl（toybox 不含）；从宿主机验证走 `adb forward tcp:13080 tcp:3080` 再 curl，期望 `home=200 bytes=~59000`。`pgrep -f dsd.py` 会把 adb 自身命令行算进去（假阳性），探进程要用 `pgrep -af 'ds[d].py'` 字面量打散或 /proc/*/cmdline 扫描 + 端口实探。
+
+## 2026-10-31 定性：dsh 后台被冻结（非启动失败）
+
+症状：启动脚本全部成功（alive=1 / inactive=0 / 日志出 URL），但 HTTP 永远 000；`ss` 显示 127.0.0.1:3080 LISTEN，而 node 进程 utime 4 秒零推进、卡在 `do_epoll_wait`。
+
+**根因：MIUI 将后台 Termux 进程冻结**。socket 已 listen 但 accept 循环不被调度。
+
+**验证**：`am start -n com.termux/.app.TermuxActivity` 把 Termux 切前台后 12s 内：
+- 直接探 3080 → `401`（token 保护，正常）
+- 两步验证 → `cookie=303` + `home=200 bytes=59623`（基准值）
+
+**结论**：服务本身没问题，不用改 dsh 启动参数。要长驻必须保活：
+1. 已做：`dumpsys deviceidle whitelist +com.termux`、`appops set com.termux RUN_ANY_IN_BACKGROUND allow`、`WAKE_LOCK allow`；
+2. 未解决：`termux-wake-lock` 从 run-as 上下文调用返回 255（需要 Termux 自己的 session），所以必须从真 Termux 会话或通知栏启动；
+3. 已部署 `~/.termux/boot/start-dsh.sh` → `setsid supervise.sh`（每 20s 巡检，不在则重起）；注意 supervisor 只能防被杀，防不了冻结。
+
+**工具坑（本轮反复踩）**：
+- 设备 `netstat -ltn` 会假阴性（看不到 3080），用 `ss -ltn` 或 `awk ''NR>1 && $2 ~ /:0C08$/ && $4==0A'' /proc/net/tcp`；hex(3080)=0C08。
+- `pkill -f X` 在 `run-as sh -c` 里会匹配到自身命令行而自杀 → 用字符类 `[d]sh/lib` 或先写脚本文件再执行。
+- run-as 不能写 /data/local/tmp（uid 不同）；写 Termux home 用 base64 内联，嵌套引号会被吞。
+- `run-as com.termux cat 相对路径` 不行（cwd 不确定），一律用绝对路径；而 `ls -l 绝对路径` 有时又报 Permission denied，同一个 `sh -c` 里反而正常。
+- super_admin:terminal 与 read_file 会整片挂（root executor unavailable），兼用 code_runner:run_python + subprocess adb 可用。
+- 宿主机验证路径：`adb forward tcp:13080 tcp:3080` 后 curl 127.0.0.1:13080；但**设备冻结时 forward 也会 000**，别误判为网络问题。
