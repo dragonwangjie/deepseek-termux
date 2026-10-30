@@ -1,0 +1,29 @@
+# Android/Termux v2 适配层
+# 1) 放开沙箱：Android 无 bwrap/landlock，否则 bash 工具报 SANDBOX_UNAVAILABLE
+# 2) 接 AMD Radeon 本地推理端点（OpenAI 兼容 chat/completions）
+- id: sandbox-policy
+  config:
+    mode: danger-full-access
+
+- id: llm-pi-ai
+  config:
+    providers:
+      radeon:
+        displayName: AMD Radeon
+        api: openai-completions
+        baseURL: https://developer.amd.com.cn/radeon/api/v1
+        apiKeyEnv: AMD_RADEON_KEY
+        defaultContextWindow: 262144
+        defaultMaxTokens: 8192
+        models:
+          - id: DeepSeek-V4.1-Flash
+          - id: DeepSeek-V4-Flash
+          - id: GLM-5.3-Flash
+          - id: Qwen3.8-27B
+          - id: Qwen3.8-Flash-Next
+          - id: MiMo-V2.6-Flash
+
+# 沙箱放开后派生出 custom，需显式指定默认权限预设，否则 permission 入口不激活
+- id: permission
+  config:
+    defaultPreset: danger-full-access
