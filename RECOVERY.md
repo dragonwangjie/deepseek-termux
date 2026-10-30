@@ -30,3 +30,20 @@ curl -s -c /sdcard/Download/tmp/ck.txt -o /dev/null "<URL>"     # 领 cookie
 curl -s -b /sdcard/Download/tmp/ck.txt -o /dev/null -w '%{http_code} %{size_download}\n' http://127.0.0.1:3080/
 # 期望：200 与 ~59000 字节；验完 rm ck.txt（内含 token）
 ```
+## 开机自启（Termux:Boot）
+
+Termux 是 debug 签名构建（0.119.0-beta.3, flags 含 DEBUGGABLE），所以 Termux:Boot 只能取 GitHub release 的 +github.debug.apk；F-Droid 版签名不匹配。v0.8.1 sha256=97e6d336f05b59f7cb25e8efa7173e0a6e665f3022b75c6d55a69b6399ecacc8
+
+无 root 时装 APK 要先解三个开关，否则 INSTALL_FAILED_USER_RESTRICTED：
+
+    adb shell settings put secure install_non_market_apps 1
+    adb shell settings put global verifier_verify_adb_installs 0
+    adb install -r -g -t tb.apk
+    adb shell am start -n com.termux.boot/.BootActivity   # 新装后起一次注册接收器
+
+自启脚本 ~/.termux/boot/start-dsh.sh 两行：
+
+    #!/data/data/com.termux/files/usr/bin/sh
+    sh /data/data/com.termux/files/home/start_web.sh > /data/data/com.termux/files/home/boot_dsh.log 2>&1
+
+坑：必须 sh 调用且 start_web.sh 本身 chmod 700，用 exec 会 can't execute: Permission denied；路径写绝对，$HOME 在传输层会丢；run-as 里不能 bash（SELinux）。
