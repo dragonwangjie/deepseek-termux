@@ -22,3 +22,11 @@ timeout 40 adb -s 127.0.0.1:5555 shell run-as com.termux cat /data/data/com.term
 
 ## 验证通过标准（上一轮实测值）
 headless 出词 + projcache lastUsed={provider:radeon}；web 服务 401=正常（token 保护）。
+
+## curl 验证要点（浏览器自动做，curl 要手动）
+token 走 query 只负责 303 换 HttpOnly cookie，直接带 token 请求仍 401。两步：
+```sh
+curl -s -c /sdcard/Download/tmp/ck.txt -o /dev/null "<URL>"     # 领 cookie
+curl -s -b /sdcard/Download/tmp/ck.txt -o /dev/null -w '%{http_code} %{size_download}\n' http://127.0.0.1:3080/
+# 期望：200 与 ~59000 字节；验完 rm ck.txt（内含 token）
+```
