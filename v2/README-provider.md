@@ -41,3 +41,27 @@ curl -s -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:3093/?token=<日志�
 
 模型选择是运行时状态（存浏览器会话记录，不在 profile），所以在 Web UI 的 Models 页选中 `AMD Radeon` 下任一模型即可；
 `--dump-config` 能列出 provider 就说明路由已注册。
+
+## 5. 订正：实际上靠环境变量，不是凭据库（2026-10-30 实测）
+
+上面第 2 步把 key 手写进 `.credentials.yaml` 的 `refs:` 段，dsh **读不到**：
+`refs` 的值必须指向 `records:` 里已存在的条目，而手写只能造出孤立 ref
+（实测：`records` 只有 `client-connection/browser-session`，`exists_in_records=False`）。
+表现为 provider 无 key → 浏览器 Models 页完全空白（不报错）。
+
+可用的做法（已端到端跑通）：把 key 放进服务进程的**环境**，让配置里的
+`apiKeyEnv: AMD_RADEON_KEY` 本身生效：
+
+```sh
+# 内容：export AMD_RADEON_KEY=<你的key>；此文件不入库
+chmod 600 /data/data/com.termux/files/home/.amd_env
+```
+
+并在 `v2/start_web.sh` 里、**`export HOME=` 之后** source 它（顺序错了会静默失效，
+run-as 下 `$HOME=/data/user/0/com.termux`）。验证：启动脚本会打印 `amd_key_set=yes`。
+
+跑通后的复核（不靠肉眼）：
+```sh
+python3 -c "import json;d=json.load(open('\$HOME/.dsh/storages/session_projcache/sessions/<sid>.json'));print(d['record']['rows']['modelSelection']['val']['lastUsed'])"
+# 期望：{'provider': 'radeon', 'model': 'Qwen3.8-27B'}
+```
