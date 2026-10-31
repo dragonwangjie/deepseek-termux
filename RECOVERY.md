@@ -171,3 +171,8 @@ durl 行为：先用 curl 实测 `/?token=` 必须返回 303/200 才输出（401
 现行启动入口只剩 `durl`（实测不响应时自行拉起）。
 仓内 `scripts/start-dsh-boot.sh` 已废弃，仅作历史参考，不得再推回设备。
 com.termux.boot 包仍在设备上（现为死路径，无任何脚本可执行）；可 `pm uninstall com.termux.boot` 进一步清掉。
+
+## 2026-10-31 17:0x 已卸载 termux:boot apk
+`pm uninstall com.termux.boot` -> Success；`pm list packages | grep termux` 只剩 com.termux。同时删除孤立日志 `$H/boot_dsh.log`。
+无头前台 apk（com.bootforeground）未安装（grep 无结果）。
+至此自启链路已完全移除：无 BOOT_COMPLETED 触发器、无 boot 目录、无 boot apk。服务只由 `durl` 按需拉起（实测 node/supervise 存活、URL 可取）。
