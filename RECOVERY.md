@@ -134,3 +134,8 @@ supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refr
 修：① 新建 ~/.bash_profile（source .bashrc + 函数定义）② 同时把可执行脚本装到 $PREFIX/bin/dshurl（PATH 永久含此目录，任意 shell 可用，不依赖 rc）。
 实测 $PREFIX/bin/dshurl 直接打印完整 URL；bash -lc "type dshurl" 也确认函数加载。
 注意：已开的 Termux 会话需新建会话才加载函数；二进制方式无需新会话。
+
+## 2026-10-31 16:0x 两个真 bug 修复
+1. dshurl 不起作用：Termux bash 是 login shell 只读 ~/.bash_profile（不读 .bashrc）。已建 .bash_profile，并把可执行脚本装到 $PREFIX/bin/dshurl（PATH 永久含此目录，不依赖 rc，任意 shell 可用）。仓库 scripts/dshurl 存源。
+2. 守护假活：旧 supervise.sh 用 pgrep 判存活，但 node 进程存活而 3080 未监听时会永远不重拉（实现：pid 17287 State=S、NO_LISTEN、svc=000）。新版改为 curl HTTP 探测 + 失败则 kill 重拉 + 每 5s 最多 6 次确认监听（日志 probe n=N）。实测：spawn 15:58:13 → probe n=1（10s 内就绪）→ svc=401，dshurl 与 dsh_url.txt 同步为新 token。
+坑备忘：用 adb 做 `pkill -f supervise.sh` 会匹配到自身命令行把启动弄死，要放进文件脚本里跑。

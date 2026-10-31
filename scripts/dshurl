@@ -1,0 +1,3 @@
+#!/data/data/com.termux/files/usr/bin/sh
+f=/data/data/com.termux/files/home/dsh_url.txt
+if [ -s "$f" ]; then cat "$f"; else echo "NOT_READY: wait 30s"; fi
