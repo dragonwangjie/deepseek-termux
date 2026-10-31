@@ -112,3 +112,16 @@ supervise.sh 的启动行现为：`setsid $BIN $A web --port 3080 --no-open --ho
 - node 监听 127.0.0.1:3080，supervise 守护已接管（每 20s 巡检）
 - 最新 URL 已写入 `~/dsh_url.txt`（token 见该文件）；需登录，凭据存 ~/dsh-creds.json
 - 无法在本会话验证真重启自启（BOOT_COMPLETED 广播被系统拒）；boot 脚本已改为 exec 前台阻塞，下次真实开机生效
+
+## 2026-10-31 11:4x 拔电冻结定论（无 root 不可解，插电即解）
+
+实验链（node 存活 State=S TracerPid=0，即未杀进程、未 ptrace 冻）：
+1. `dumpsys deviceidle whitelist +com.termux` 成功写入 /data/system/deviceidle.xml（uid 2000 即可，重启保留），`com.termux.boot` 同时在列 → 无效，熄屏 000
+2. `settings put global settings_enable_monitor_phantom_procs false` + `max_phantom_processes 65535` → 无效
+3. `appops set com.termux RUN_ANY_IN_BACKGROUND allow` 已生效 → 无效
+4. `dumpsys deviceidle force-idle` 进深度 idle 时（插电）反而存活；拔电熄屏 100s 必 000
+→ 结论：冻结源 = CPU suspend（suspend-to-RAM）。`stay_on_while_plugged_in=15` 插电时禁止 suspend，故插电即稳。无 root 无法持有永久 wakelock（termux-wake-lock 在 Termux:Boot 退出时 17s 必放，`am startservice` 被拒，SYSTEM_EXEMPTED op 不存在）。
+
+### 无人值守最终配方
+插电 + 屏幕可关（stayon 只保 CPU，省电可接受）；supervise.sh 20s 巡检兼 socket 丢失自愈（重 spawn 会换 token，dsh_url.txt 随之刷新）。
+所有已应用的持久开关（重启后保留）：stay_on=15、deviceidle 白名单×2、phantom 监控关、RUN_ANY_IN_BACKGROUND allow、standby bucket active（bucket 不持久，重启后可再 `am set-standby-bucket com.termux active`，非必需）。
