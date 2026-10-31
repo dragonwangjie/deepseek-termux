@@ -80,3 +80,21 @@ Termux 是 debug 签名构建（0.119.0-beta.3, flags 含 DEBUGGABLE），所以
 - `run-as com.termux cat 相对路径` 不行（cwd 不确定），一律用绝对路径；而 `ls -l 绝对路径` 有时又报 Permission denied，同一个 `sh -c` 里反而正常。
 - super_admin:terminal 与 read_file 会整片挂（root executor unavailable），兼用 code_runner:run_python + subprocess adb 可用。
 - 宿主机验证路径：`adb forward tcp:13080 tcp:3080` 后 curl 127.0.0.1:13080；但**设备冻结时 forward 也会 000**，别误判为网络问题。
+
+## 2026-10-31 09:15 冻结问题已解（stayon + bucket + 重启循环）
+
+上一节定性后验证：`svc power stayon true`（`settings put global stay_on_while_plugged_in 15`）+ `am set-standby-bucket com.termux active`（bucket=5）+ supervise.sh 20s 巡检，三项同时生效后：
+- Termux 完全后台（焦点在淘宝）连续 3 次 `401`（不冻结）
+- 完整验证：`cookie=303 → home=200 bytes=59623 → <title>DeepSeek Harness`
+- KEYCODE_SLEEP 进 Dozing 后 90s：仍 `401`，pid 不变
+
+未覆盖：长时间深度 doze（>10min、拔电）与下次真实重启后的自启（boot 已改为 `exec sh supervise.sh` 前台阻塞，为了在 Termux:Boot 释放 wakelock 前不退出）。
+
+### 无法绕过的限制
+- `am broadcast BOOT_COMPLETED` 现在报 `SecurityException: not allowed to send broadcast from uid 2000`（06:08 那次成功是实例差异），所以 boot 脚本只能靠真重启验证。
+- `am startservice com.termux/.app.TermuxService` 从 adb 报「Requires permission not exported from uid 10559」；从 `run-as` 报「Can't start from invalid source: 10559」→ **termux-wake-lock 无法外部触发**，日志显示它 ACQ 17s 后必 REL（com.termux.boot 退出即释放）。
+- 因此保活靠 stayon+bucket+supervise，而不是 wake-lock。
+
+### 开机自启现状（下次重启生效）
+~/.termux/boot/start-dsh.sh：`exec sh supervise.sh >> supervise.log 2>&1`（exec 不后台，阻止 wakelock 释放）
+start-dsh 依赖 supervise.sh：每 20s 检查 `pgrep -f dsh/lib/bin.js`，没起就 `setsid node … web --port 3080`。
