@@ -1,5 +1,7 @@
 # DeepSeek Harness for Android/Termux
 
+> 本站点为 `dragonwangjie/deepseek-termux`（部署记录与脚本集），fork 自 [FunnelCakes/deepseek-harness-android](https://github.com/FunnelCakes/deepseek-harness-android)；上游兼容性修复以原仓库为准。 · This fork carries my deployment runbook and scripts; upstream fixes live in the original repo.
+
 > 在 **Android 手机 Termux 环境** 原生运行 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的一键部署项目 · One-click deployment of DeepSeek Harness on **Android/Termux**.
 >
 > 点击下方语言标题切换 · Click a language below to view its README.
@@ -32,12 +34,12 @@
 
 ```bash
 pkg install -y git
-git clone https://github.com/FunnelCakes/deepseek-harness-android.git
-cd deepseek-harness-android
+git clone https://github.com/dragonwangjie/deepseek-termux.git
+cd deepseek-termux
 bash setup.sh
 ```
 
-> 🇨🇳 **国内用户提示**：`setup.sh` 会自动测速，npm / nodejs.org 较慢时**自动切换到 npmmirror 镜像**（仅本次会话生效，不改全局配置）。若 `git clone` 很慢或超时，请先开代理/TUN，或改用镜像 clone（如 `https://gitclone.com/github.com/FunnelCakes/deepseek-harness-android.git`）。
+> 🇨🇳 **国内用户提示**：`setup.sh` 会自动测速，npm / nodejs.org 较慢时**自动切换到 npmmirror 镜像**（仅本次会话生效，不改全局配置）。若 `git clone` 很慢或超时，请先开代理/TUN，或改用镜像 clone（如 `https://gitclone.com/github.com/dragonwangjie/deepseek-termux.git`）。
 
 ### 三、使用
 
@@ -109,7 +111,7 @@ durl      # 唯一日常入口：实测服务可用才输出带 token 的地址�
 - 不同手机 / ROM 的差异可能导致额外问题，例如：部分 ROM 通过 SELinux 禁用 `link()` 系统调用（会话/附件无法持久化，本脚本已改为 `rename()` 修复）、命名空间沙箱权限不同、bwrap/landlock 是否可用等。
 - `setup.sh` 覆盖了通用 Android 场景，但个别机型可能需要额外适配。
 
-**欢迎提 issue / PR 适配更多环境**：如果你在其它品牌、系统版本或 root 状态下遇到问题，欢迎在 [Issues](https://github.com/FunnelCakes/deepseek-harness-android/issues) 提交，或提交 Pull Request 补充对应机型的修复。
+**欢迎提 issue / PR 适配更多环境**：如果你在其它品牌、系统版本或 root 状态下遇到问题，欢迎在 [Issues](https://github.com/dragonwangjie/deepseek-termux/issues) 提交，或提交 Pull Request 补充对应机型的修复。
 
 ### 参考
 
@@ -142,8 +144,8 @@ Run `pkg update -y` after opening Termux.
 
 ```bash
 pkg install -y git
-git clone https://github.com/FunnelCakes/deepseek-harness-android.git
-cd deepseek-harness-android
+git clone https://github.com/dragonwangjie/deepseek-termux.git
+cd deepseek-termux
 bash setup.sh
 ```
 
@@ -215,7 +217,7 @@ durl      # the only daily entry point: prints a live token URL, (re)starts the 
 - Different phones / ROMs may behave differently, e.g. some ROMs block the `link()` syscall via SELinux (sessions/attachments fail to persist — this script switches to `rename()` to fix it), namespace-sandbox permissions vary, and bwrap/landlock may or may not be available.
 - `setup.sh` covers the common Android cases, but specific devices may need extra tweaks.
 
-**Issues & PRs welcome**: if you hit a problem on another brand / OS version / root state, please open an [issue](https://github.com/FunnelCakes/deepseek-harness-android/issues) or submit a pull request with a fix for your environment.
+**Issues & PRs welcome**: if you hit a problem on another brand / OS version / root state, please open an [issue](https://github.com/dragonwangjie/deepseek-termux/issues) or submit a pull request with a fix for your environment.
 
 ### References
 
