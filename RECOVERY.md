@@ -163,3 +163,11 @@ durl 行为：先用 curl 实测 `/?token=` 必须返回 303/200 才输出（401
 `curl -c jar -b jar -L "<带 token 的 URL>"` → final=200, url_effective=http://127.0.0.1:3080/, redirects=1（token 换 cookie 后拿到 UI）。
 之前用裸 curl 测得 401/303 的原因是未带 cookie，不是服务故障；/api/sessions 等是我猜的路径（404），不计入结论。
 结论：`durl` 输出的地址在手机浏览器直接可用（已确认服务侧 200）。
+
+## 2026-10-31 16:5x 已删除 termux:boot 自启（用户要求）
+删除：`$H/.termux/boot/start-dsh.sh` 与 `.termux/boot/` 目录（实测 ls 已 No such file）。
+残留检查：.bashrc / .bash_profile 无 supervise 引用（none_in_shell_rc）；.termux/ 只剩 termux.properties。
+服务当前仍在跑（node 31285）——只删自启，不影响已运行实例。
+现行启动入口只剩 `durl`（实测不响应时自行拉起）。
+仓内 `scripts/start-dsh-boot.sh` 已废弃，仅作历史参考，不得再推回设备。
+com.termux.boot 包仍在设备上（现为死路径，无任何脚本可执行）；可 `pm uninstall com.termux.boot` 进一步清掉。
