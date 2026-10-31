@@ -128,3 +128,9 @@ supervise.sh 的启动行现为：`setsid $BIN $A web --port 3080 --no-open --ho
 
 ## 2026-10-31 12:0x 守护脚本收编
 supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refresh_url，自动维护 ~/dsh_url.txt（重启/重拉换 token 不再需要手动刷）；兼带修掉重复 --no-open。boot 脚本同步存 scripts/start-dsh-boot.sh。已装机并实测：删 dsh_url.txt 后 25s 自动重建。
+
+## 2026-10-31 15:5x dshurl 取地址（两处修正）
+坑：Termux 的 bash 是 login shell，只读 ~/.bash_profile，不读 ~/.bashrc → 光写 .bashrc 无效。
+修：① 新建 ~/.bash_profile（source .bashrc + 函数定义）② 同时把可执行脚本装到 $PREFIX/bin/dshurl（PATH 永久含此目录，任意 shell 可用，不依赖 rc）。
+实测 $PREFIX/bin/dshurl 直接打印完整 URL；bash -lc "type dshurl" 也确认函数加载。
+注意：已开的 Termux 会话需新建会话才加载函数；二进制方式无需新会话。
