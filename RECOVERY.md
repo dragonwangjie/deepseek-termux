@@ -158,3 +158,8 @@ supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refr
 durl 行为：先用 curl 实测 `/?token=` 必须返回 303/200 才输出（401=服务活但 token 旧，不算通过）；不通过则当场 pkill+run-dsh.sh 拉起，每 3s 重试最多 12 次，成功后原子写 dsh_url.txt 并顺手带起 supervise.sh。
 实测（进程全杀 + 删文件的最坏情况）：`durl` → “not responding, starting” → 输出可用 URL，rc=0。
 仍存的硬限制：MIUI LockScreenClean 燄屏 Force stop com.termux（logcat 已证），因此服务会时好时坏；`durl` 的意义是把“看状态”变成“一条命令保证拿到可用地址”。真正保活需无头前台服务 apk 或 root。
+
+## 2026-10-31 17:0x 登录链路真实验证（cookie jar）
+`curl -c jar -b jar -L "<带 token 的 URL>"` → final=200, url_effective=http://127.0.0.1:3080/, redirects=1（token 换 cookie 后拿到 UI）。
+之前用裸 curl 测得 401/303 的原因是未带 cookie，不是服务故障；/api/sessions 等是我猜的路径（404），不计入结论。
+结论：`durl` 输出的地址在手机浏览器直接可用（已确认服务侧 200）。
