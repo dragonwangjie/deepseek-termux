@@ -150,3 +150,11 @@ supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refr
 ② 保活靠不燄屏：插电（stay_on=15 已开，插电时屏幕不自动熄）
 ③ 将 `dshurl` 当手动拉起入口：它现在从 dsh_web.log 现推 URL（文件没了也能出），若服务已死则提示 `sh ~/supervise.sh`
 无头守护真正可行方案：需单独前台服务 apk（或 root），普通 Termux 进程撑不过 LockScreenClean。
+
+## 2026-10-31 16:4x NOT_READY 彻底修：新增 durl（自带拉起 + 真有效性校验）
+之前 NOT_READY 两层原因：
+1. 旧 bash 会话缓存了旧函数（函数只存内存，改文件不生效）——已删函数、且改用新命令名 `durl` 避开缓存（dshurl 已软链到 durl）。
+2. 旧 dshurl 只看文件里有无 URL，不验服务死活；加上早期 supervise 里 `: > $L` 会清日志 → 退路也被抹掉。
+durl 行为：先用 curl 实测 `/?token=` 必须返回 303/200 才输出（401=服务活但 token 旧，不算通过）；不通过则当场 pkill+run-dsh.sh 拉起，每 3s 重试最多 12 次，成功后原子写 dsh_url.txt 并顺手带起 supervise.sh。
+实测（进程全杀 + 删文件的最坏情况）：`durl` → “not responding, starting” → 输出可用 URL，rc=0。
+仍存的硬限制：MIUI LockScreenClean 燄屏 Force stop com.termux（logcat 已证），因此服务会时好时坏；`durl` 的意义是把“看状态”变成“一条命令保证拿到可用地址”。真正保活需无头前台服务 apk 或 root。
