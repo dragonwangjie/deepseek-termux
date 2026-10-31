@@ -124,7 +124,15 @@ OK   one dsh node process
 == fails=0 warns=1
 ```
 
-那条 `WARN link() blocked` 在 HyperOS/Android 16 上是**预期**（SELinux 禁 hardlink，计 WARN 不计 FAIL）：意味着会话/附件持久化需要 `patches/patch-dsh-android-link.js` 的 rename 回退。只有 `fails=0` 才算部署成功。
+那条 `WARN link() blocked` 在 HyperOS/Android 16 上是**预期**（SELinux 禁 hardlink，计 WARN 不计 FAIL）。只有 `fails=0` 才算部署成功。
+
+关于 link()：本机实测 `link()` 被禁，且 dsh 安装副本里**没有**补丁标记（`grep -rl publishNoReplaceNoHardlink $DSHDIR/lib` 命中 0 个），即 `patches/patch-dsh-android-link.js` 尚未应用到 `~/dsh022`。所以这是一项**待办**，不是已完成状态。影呷面向（会话发布/附件保存/write 新建文件报 EACCES）记录在 `ANALYSIS.md`，未在本机逐项复现，因而不断言“会话已损”。应用方法：
+
+```sh
+node patches/patch-dsh-android-link.js $HOME/dsh022/node_modules/@deepseek-ai/dsh/lib
+```
+
+打完重跑 `sh scripts/verify-deploy.sh`，再看 `~/dsh_web.log` 有无新增 EACCES。
 
 **判定只看这一行**：`final=200 redirects=1`。裸 curl 不带 cookie jar 得到 401/303 是预期行为，不是故障；`/api/sessions` 之类路径 404 同理，不作判据。验完删掉 cookie 文件（内含会话 cookie）。
 
