@@ -28,7 +28,7 @@ while [ $n -lt 12 ]; do
 done
 if good; then
   out "$(tok)"
-  setsid "$U/bin/sh" "$H/supervise.sh" >> "$H/supervise.log" 2>&1 </dev/null &
+  pgrep -f supervise.sh >/dev/null 2>&1 || setsid "$U/bin/sh" "$H/supervise.sh" >> "$H/supervise.log" 2>&1 </dev/null &
 else
   echo "FAILED: tail -20 $L"; exit 1
 fi
