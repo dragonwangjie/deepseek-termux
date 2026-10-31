@@ -176,3 +176,13 @@ com.termux.boot 包仍在设备上（现为死路径，无任何脚本可执行�
 `pm uninstall com.termux.boot` -> Success；`pm list packages | grep termux` 只剩 com.termux。同时删除孤立日志 `$H/boot_dsh.log`。
 无头前台 apk（com.bootforeground）未安装（grep 无结果）。
 至此自启链路已完全移除：无 BOOT_COMPLETED 触发器、无 boot 目录、无 boot apk。服务只由 `durl` 按需拉起（实测 node/supervise 存活、URL 可取）。
+
+## 2026-10-31 17:3x 文档与验证脚本入库（DEPLOY.md + verify-deploy.sh）
+新增 `DEPLOY.md`（部署手册：两条安装路径 / run-as+base64 远程部署 / 验证 / 保活边界 / 卸载）与 `scripts/verify-deploy.sh`（6 项功能校验，真实 HTTP 往返 + 真实 link() 探测）。README 中英两处指向 DEPLOY.md。
+本轮实测新发现（均已写进文档）：
+1. `run-as` 下 HOME=`/data/user/0/com.termux`，用 `$HOME` 拼路径会整片假阴性（本方第一次探测 dsh 补丁全部返回 0 就是这个原因，不是 dsh 未打补丁）。
+2. 本环境 `ss -ltn` / `netstat` / `/proc/net/tcp` 都看不到 3080 监听（返回 0 行），但 curl 能连通。**端口探测不能用 ss**，只能 curl 实测。
+3. `pgrep -f supervise.sh` 会把脚本内看门狗子 shell 算进去（实测 1 个守护 = 2 个 pid，ppid 链 2381->14481）；统计“独立守护数”必须看父进程 cmdline。
+4. `dumpsys power` / `settings` 从 run-as 不可读（Exception/空），亮屏状态只能从 adb shell 读。
+5. verify-deploy.sh 实跑结果：fails=0 warns=1，`login round-trip final=200 redirects=1`；WARN=link() blocked 在 HyperOS 上是预期（计 WARN 不计 FAIL）。
+6. 熄屏时 curl 直接 000（LockScreenClean 已 Force stop），亮屏后 durl 0.2s 返回可用地址。因此“不可达”先查亮屏，不要先改脚本。
