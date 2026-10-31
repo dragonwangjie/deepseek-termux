@@ -139,3 +139,14 @@ supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refr
 1. dshurl 不起作用：Termux bash 是 login shell 只读 ~/.bash_profile（不读 .bashrc）。已建 .bash_profile，并把可执行脚本装到 $PREFIX/bin/dshurl（PATH 永久含此目录，不依赖 rc，任意 shell 可用）。仓库 scripts/dshurl 存源。
 2. 守护假活：旧 supervise.sh 用 pgrep 判存活，但 node 进程存活而 3080 未监听时会永远不重拉（实现：pid 17287 State=S、NO_LISTEN、svc=000）。新版改为 curl HTTP 探测 + 失败则 kill 重拉 + 每 5s 最多 6 次确认监听（日志 probe n=N）。实测：spawn 15:58:13 → probe n=1（10s 内就绪）→ svc=401，dshurl 与 dsh_url.txt 同步为新 token。
 坑备忘：用 adb 做 `pkill -f supervise.sh` 会匹配到自身命令行把启动弄死，要放进文件脚本里跑。
+
+## 2026-10-31 16:2x NOT_READY 根因：MIUI LockScreenClean
+证据：`logcat -b system` 16:12:43 `ActivityManager: Force stopping com.termux.boot ... LockScreenClean` + `Killing ...com.termux.boot/u0a559 (adj 905): stop com.termux.boot due to LockScreenClean`；时间线与 supervise.log 的 spawn 16:03:52/16:07:39/16:12:03 完全对应，且 dsh_web.log 零 error（node 不是自崩，是被 SIGKILL）。
+含义：**燄屏就 Force stop 整个 com.termux uid**——node 与 supervise.sh 同灭，无人重拉，直到用户再次打开 Termux。
+已没牙的招：RUN_ANY_IN_BACKGROUND=allow、doze 白名单、stay_on=15、phantom 关——LockScreenClean 不看这些。
+可写开关搜索结果为 null（global/secure/system 无 lock_screen_clean 类键，由 com.miui.powerkeeper 内部控制，adb 无法改）。
+有效出路（三选一，无 root）：
+① 应用管理→Termux→电池→省电策略=无限制 + 最近任务下拉锁定 Termux（MIUI 官方正规口子）
+② 保活靠不燄屏：插电（stay_on=15 已开，插电时屏幕不自动熄）
+③ 将 `dshurl` 当手动拉起入口：它现在从 dsh_web.log 现推 URL（文件没了也能出），若服务已死则提示 `sh ~/supervise.sh`
+无头守护真正可行方案：需单独前台服务 apk（或 root），普通 Termux 进程撑不过 LockScreenClean。

@@ -15,13 +15,13 @@ is_up() {
   $U/bin/curl -s -m 5 -o /dev/null http://127.0.0.1:3080/ && return 0
   return 1
 }
-refresh_url() { grep http $L | tail -1 | sed "s/^dsh web: //" | tr -d "\"'" > $H/dsh_url.txt; }
+refresh_url() { u=$(grep -o "http://[^ ]*token=[^ ]*" $L | tail -1); [ -n "$u" ] && { printf "%s\n" "$u" > $H/dsh_url.txt.tmp; mv $H/dsh_url.txt.tmp $H/dsh_url.txt; }; }
 while :; do
   if ! is_up; then
     pkill -9 -f 'dsh/lib/bin.js' 2>/dev/null
     sleep 2
     OLDPID=""
-    setsid $BIN $A web --port 3080 --no-open --host 127.0.0.1 >> $L 2>&1 </dev/null &
+  setsid $U/bin/sh $H/run-dsh.sh >> $L 2>&1 </dev/null &
     SP=$!
     echo "spawn $(date +%T) pid=$SP" >> $H/supervise.log
     n=0
@@ -31,6 +31,7 @@ while :; do
       n=$((n+1))
     done
     echo "probe $(date +%T) n=$n" >> $H/supervise.log
+    ( while kill -0 $SP 2>/dev/null; do sleep 5; done; echo "died $(date +%T) pid=$SP" >> $H/supervise.log ) &
     OLDPID=$SP
   fi
   refresh_url
