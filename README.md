@@ -17,6 +17,38 @@
 <details open>
 <summary><b>🇨🇳 中文</b> · 点击收起/展开中文说明</summary>
 
+## 部署速查 / Quick start（2026-10-31 实机验证）
+
+```bash
+# 0) 全新安装（干净 Termux）
+pkg update -y && pkg install -y git curl
+git clone https://github.com/dragonwangjie/deepseek-termux.git
+cd deepseek-termux && bash setup.sh
+
+# 1) 日常只记一个命令：拿到当前可用地址（服务已死则当场拉起，20-40s）
+durl        # -> http://127.0.0.1:3080/?token=<每次启动重新生成>
+
+# 2) 验证部署是否真的可用（真实 HTTP 往返，不看源码）
+sh scripts/verify-deploy.sh     # 期望最后行 fails=0
+
+# 3) 停止（必须先杀守护，否则 3s 内被重拉）
+pkill -f supervise.sh && pkill -f bin.js
+```
+
+| 要做什么 | 用哪个 |
+|---|---|
+| 拿可用地址 / 拉活服务 | `durl`（唯一日常入口） |
+| 单次前台启动 | `sh ~/run-dsh.sh` |
+| 后台自动重拉 | `setsid sh ~/supervise.sh >> ~/supervise.log 2>&1 &` |
+| 部署体检 | `sh scripts/verify-deploy.sh` |
+| 换机 / 远程部署 / 保活边界 / 卸载 | [DEPLOY.md](DEPLOY.md) |
+| 历史踩坑全记录 | [RECOVERY.md](RECOVERY.md) |
+
+> ⚠️ **无开机自启（有意为之）**：`termux:boot` 已卸载、boot 脚本已删。MIUI/HyperOS 燄屏会 Force stop `com.termux`，自启插件也挨不住。需要时用 `durl` 一键拉活。
+> ⚠️ **勿缓存 `durl` 输出的 URL**：token 随进程重启变化，旧 token 会 401。
+
+---
+
 ## 这是什么
 
 在 Android 手机上原生运行 DeepSeek Harness（`@deepseek-ai/dsh`，DeepSeek 官方的 agent harness，类 Claude Code）。通过 **Web UI**（`http://127.0.0.1:3080`）在手机浏览器里使用，agent 可在手机上真实执行 bash 命令。
