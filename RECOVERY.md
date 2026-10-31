@@ -125,3 +125,6 @@ supervise.sh 的启动行现为：`setsid $BIN $A web --port 3080 --no-open --ho
 ### 无人值守最终配方
 插电 + 屏幕可关（stayon 只保 CPU，省电可接受）；supervise.sh 20s 巡检兼 socket 丢失自愈（重 spawn 会换 token，dsh_url.txt 随之刷新）。
 所有已应用的持久开关（重启后保留）：stay_on=15、deviceidle 白名单×2、phantom 监控关、RUN_ANY_IN_BACKGROUND allow、standby bucket active（bucket 不持久，重启后可再 `am set-standby-bucket com.termux active`，非必需）。
+
+## 2026-10-31 12:0x 守护脚本收编
+supervise.sh 新版（仓库 scripts/ 有源）：spawn 后 15s + 每循环 refresh_url，自动维护 ~/dsh_url.txt（重启/重拉换 token 不再需要手动刷）；兼带修掉重复 --no-open。boot 脚本同步存 scripts/start-dsh-boot.sh。已装机并实测：删 dsh_url.txt 后 25s 自动重建。
