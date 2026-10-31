@@ -15,7 +15,10 @@ good() {
   [ "$v" = "303" ] || [ "$v" = "200" ]
 }
 out() { printf "%s\n" "$1" > "$H/dsh_url.txt.tmp"; mv "$H/dsh_url.txt.tmp" "$H/dsh_url.txt"; printf "%s\n" "$1"; }
-if good; then out "$(tok)"; exit 0; fi
+if good; then
+  pgrep -f supervise.sh >/dev/null 2>&1 || setsid "$U/bin/sh" "$H/supervise.sh" >> "$H/supervise.log" 2>&1 </dev/null &
+  out "$(tok)"; exit 0
+fi
 echo "not responding, starting (20-40s)..."
 pkill -9 -f "dsh/lib/bin.js" 2>/dev/null
 sleep 1
