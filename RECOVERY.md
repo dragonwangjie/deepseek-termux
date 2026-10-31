@@ -98,3 +98,17 @@ Termux 是 debug 签名构建（0.119.0-beta.3, flags 含 DEBUGGABLE），所以
 ### 开机自启现状（下次重启生效）
 ~/.termux/boot/start-dsh.sh：`exec sh supervise.sh >> supervise.log 2>&1`（exec 不后台，阻止 wakelock 释放）
 start-dsh 依赖 supervise.sh：每 20s 检查 `pgrep -f dsh/lib/bin.js`，没起就 `setsid node … web --port 3080`。
+
+## 2026-10-31 10:5x 补修：`--no-open` 与拔电 Doze 告警
+
+### `--no-open` 必须加
+supervise.sh 的启动行现为：`setsid $BIN $A web --port 3080 --no-open --host 127.0.0.1 >> dsh_web.log 2>&1 </dev/null &`
+原因：dsh 默认会“打开默认浏览器”，在 Termux/Android 后台调起浏览器会阻塞，导致 node 打印了 URL 却未完成 listen（grep /proc/net/tcp 的 :0BF0 为空，curl=000）。加 `--no-open` 后后台也能正常 bind（self=401）。
+
+### stay_on 仅插电生效
+`stay_on_while_plugged_in=15` 只在 AC/USB 供电时阻止 suspend。设备拔电后（实测 AC powered:false, 电 53%）会进 Dozing，node 会被 MIUI 冻结，服务不响应。要长期无人值守必须：插着电 + 亮屏，或 root 后加 `dumpsys deviceidle whitelist +com.termux` / `settings put global device_idle_mode light`。
+
+### 当前交还状态
+- node 监听 127.0.0.1:3080，supervise 守护已接管（每 20s 巡检）
+- 最新 URL 已写入 `~/dsh_url.txt`（token 见该文件）；需登录，凭据存 ~/dsh-creds.json
+- 无法在本会话验证真重启自启（BOOT_COMPLETED 广播被系统拒）；boot 脚本已改为 exec 前台阻塞，下次真实开机生效
