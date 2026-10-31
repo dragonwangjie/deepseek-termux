@@ -7,6 +7,9 @@
 > [!IMPORTANT]
 > **当前最高支持 deepseek-harness rc.7**，向下兼容 rc.6 及更早版本。
 
+> [!TIP]
+> **重复部署 / 换机 / 远程部署 / 验证** 请看 [DEPLOY.md](DEPLOY.md)（含 Android 16 + HyperOS 实测记录与保活边界）· For repeat deploys, remote deploys over adb, verification and MIUI keep-alive limits see [DEPLOY.md](DEPLOY.md).
+
 ---
 
 <details open>
@@ -45,6 +48,26 @@ bash ~/dsh/stop_dsh.sh    # 停止
 
 打开 <http://127.0.0.1:3080>，在 **Models** 页填入你的 **DeepSeek API Key**（存于 `~/.dsh/.credentials.yaml`，0600 权限），即可开始。
 
+#### 路径 B：脚本集（要可控重启 / 无人值守推荐）
+
+不想用 `dsh` 全局命令时，本仓库 `scripts/` 提供三个职责单一的脚本（完整说明见 [DEPLOY.md](DEPLOY.md)）：
+
+```bash
+PREFIX=/data/data/com.termux/files/usr
+cp scripts/run-dsh.sh scripts/supervise.sh $HOME/
+install -m 755 scripts/durl $PREFIX/bin/durl
+
+durl      # 唯一日常入口：实测服务可用才输出带 token 的地址；服务死了当场拉起
+```
+
+- `run-dsh.sh` 单次前台启动（`--port 3080 --no-open --host 127.0.0.1`）
+- `supervise.sh` 守护循环，挂后 3s 重拉，持 `termux-wake-lock`
+- `durl` 幂等取地址，token 每次启动重新生成，**不要缓存地址**
+- 停止：`pkill -f supervise.sh && pkill -f bin.js`（先杀守护，否则会被重拉）
+- 验证部署：`sh scripts/verify-deploy.sh`（做真实 HTTP 往返 + 真实 `link()` 探测，不 grep 源码）
+
+> ⚠️ 本项目**不提供开机自启**：`termux:boot` 方案已移除（脚本删除 + `com.termux.boot` 卸载）。原因见 [RECOVERY.md](RECOVERY.md)：MIUI 燄屏会 Force stop `com.termux`，boot 插件也熬不过，且会被 Force-stop 后收不到 `BOOT_COMPLETED`。
+
 ### 四、setup.sh 自动修复的 Android 兼容问题
 
 | 问题 | 现象 | 修复 |
@@ -82,6 +105,7 @@ bash ~/dsh/stop_dsh.sh    # 停止
 ### 七、作者测试环境与兼容性
 
 - **测试设备**：华为 Mate 60（ALN-AL80），HarmonyOS 4.2.0（build 4.2.0.186），**无 root**，Termux（Node v26，aarch64）。
+- **额外实测**：Redmi `25053RT47C`，HyperOS `OS3.0.305.0.WOLCNXM`（MIUI V816），**Android 16**，**无 root**，node v26.12.1 / dsh 0.2.2-alpha.2 —— 该机特有坑（燄屏 Force stop、`ss` 看不到监听、`run-as` 下 HOME 不同）已全部写进 [DEPLOY.md](DEPLOY.md)。
 - 不同手机 / ROM 的差异可能导致额外问题，例如：部分 ROM 通过 SELinux 禁用 `link()` 系统调用（会话/附件无法持久化，本脚本已改为 `rename()` 修复）、命名空间沙箱权限不同、bwrap/landlock 是否可用等。
 - `setup.sh` 覆盖了通用 Android 场景，但个别机型可能需要额外适配。
 
@@ -133,6 +157,23 @@ bash ~/dsh/stop_dsh.sh    # stop
 ```
 
 Open <http://127.0.0.1:3080>, enter your **DeepSeek API Key** in the **Models** page (stored at `~/.dsh/.credentials.yaml`, mode 0600), and start chatting.
+
+#### Path B: script set (recommended for controlled restarts / unattended use)
+
+```bash
+PREFIX=/data/data/com.termux/files/usr
+cp scripts/run-dsh.sh scripts/supervise.sh $HOME/
+install -m 755 scripts/durl $PREFIX/bin/durl
+
+durl      # the only daily entry point: prints a live token URL, (re)starts the service if dead
+```
+
+- `run-dsh.sh` one-shot foreground start · `supervise.sh` restart loop holding `termux-wake-lock`
+- tokens are regenerated on every start, so **never cache the URL**
+- stop: `pkill -f supervise.sh && pkill -f bin.js`
+- verify an install: `sh scripts/verify-deploy.sh` (real HTTP round-trip + real `link()` probe)
+
+> ⚠️ **No boot autostart on purpose.** `termux:boot` was removed (script deleted, `com.termux.boot` uninstalled): MIUI force-stops `com.termux` on screen-off and a force-stopped package never receives `BOOT_COMPLETED`. See [RECOVERY.md](RECOVERY.md).
 
 ### 4. Android issues auto-fixed by setup.sh
 
